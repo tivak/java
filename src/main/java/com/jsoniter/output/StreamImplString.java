@@ -200,6 +200,8 @@ class StreamImplString {
     }
 
     private static void writeAsciiChar(JsonStream stream, int c) throws IOException {
+// need add escape all special chars
+
         switch (c) {
             case '"':
                 stream.write((byte) '\\', (byte) '"');
