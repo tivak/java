@@ -27,6 +27,8 @@ class ReflectionObjectDecoder {
     public ReflectionObjectDecoder(ClassInfo classInfo) {
         try {
             init(classInfo);
+        } catch (JsonException e) {
+            throw e;
         } catch (Exception e) {
             throw new JsonException(e);
         }
@@ -115,6 +117,8 @@ class ReflectionObjectDecoder {
         public Object decode(JsonIterator iter) throws IOException {
             try {
                 return decode_(iter);
+            } catch (RuntimeException e) {
+                throw e;
             } catch (Exception e) {
                 throw new JsonException(e);
             }
@@ -178,6 +182,8 @@ class ReflectionObjectDecoder {
         public Object decode(JsonIterator iter) throws IOException {
             try {
                 return decode_(iter);
+            } catch (RuntimeException e) {
+                throw e;
             } catch (Exception e) {
                 throw new JsonException(e);
             }
@@ -255,6 +261,8 @@ class ReflectionObjectDecoder {
         public Object decode(JsonIterator iter) throws IOException {
             try {
                 return decode_(iter);
+            } catch (RuntimeException e) {
+                throw e;
             } catch (Exception e) {
                 throw new JsonException(e);
             }
@@ -402,7 +410,10 @@ class ReflectionObjectDecoder {
         for (WrapperDescriptor wrapper : desc.bindingTypeWrappers) {
             Object[] args = new Object[wrapper.parameters.size()];
             for (int i = 0; i < wrapper.parameters.size(); i++) {
-                args[i] = temp[wrapper.parameters.get(i).idx];
+                Object arg = temp[wrapper.parameters.get(i).idx];
+                if (arg != NOT_SET) {
+                    args[i] = arg;
+                }
             }
             wrapper.method.invoke(obj, args);
         }

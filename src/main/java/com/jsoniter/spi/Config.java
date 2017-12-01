@@ -343,6 +343,9 @@ public class Config extends EmptyExtension {
     }
 
     private void detectCtor(ClassDescriptor desc) {
+        if (desc.ctor == null) {
+            return;
+        }
         for (Constructor ctor : desc.clazz.getDeclaredConstructors()) {
             JsonCreator jsonCreator = getJsonCreator(ctor.getAnnotations());
             if (jsonCreator == null) {
@@ -374,8 +377,10 @@ public class Config extends EmptyExtension {
     private void updateBindings(ClassDescriptor desc) {
         boolean globalOmitDefault = JsoniterSpi.getCurrentConfig().omitDefaultValue();
         for (Binding binding : desc.allBindings()) {
+            boolean annotated = false;
             JsonIgnore jsonIgnore = getJsonIgnore(binding.annotations);
             if (jsonIgnore != null) {
+                annotated = true;
                 if (jsonIgnore.ignoreDecoding()) {
                     binding.fromNames = new String[0];
                 }
@@ -386,6 +391,7 @@ public class Config extends EmptyExtension {
             // map JsonUnwrapper is not getter
             JsonUnwrapper jsonUnwrapper = getJsonUnwrapper(binding.annotations);
             if (jsonUnwrapper != null) {
+                annotated = true;
                 binding.fromNames = new String[0];
                 binding.toNames = new String[0];
             }
@@ -394,19 +400,38 @@ public class Config extends EmptyExtension {
             }
             JsonProperty jsonProperty = getJsonProperty(binding.annotations);
             if (jsonProperty != null) {
+                annotated = true;
                 updateBindingWithJsonProperty(binding, jsonProperty);
             }
             if (getAnnotation(binding.annotations, JsonMissingProperties.class) != null) {
+                annotated = true;
                 // this binding will not bind from json
                 // instead it will be set by jsoniter with missing property names
                 binding.fromNames = new String[0];
                 desc.onMissingProperties = binding;
             }
             if (getAnnotation(binding.annotations, JsonExtraProperties.class) != null) {
+                annotated = true;
                 // this binding will not bind from json
                 // instead it will be set by jsoniter with extra properties
                 binding.fromNames = new String[0];
                 desc.onExtraProperties = binding;
+            }
+            if (annotated && binding.field != null) {
+                if (desc.setters != null) {
+                    for (Binding setter : desc.setters) {
+                        if (binding.field.getName().equals(setter.name)) {
+                            setter.fromNames = new String[0];
+                            setter.toNames = new String[0];
+                        }
+                    }
+                    for (Binding getter : desc.getters) {
+                        if (binding.field.getName().equals(getter.name)) {
+                            getter.fromNames = new String[0];
+                            getter.toNames = new String[0];
+                        }
+                    }
+                }
             }
         }
     }
@@ -436,6 +461,8 @@ public class Config extends EmptyExtension {
         if (jsonProperty.decoder() != Decoder.class) {
             try {
                 binding.decoder = jsonProperty.decoder().newInstance();
+            } catch (RuntimeException e) {
+                throw e;
             } catch (Exception e) {
                 throw new JsonException(e);
             }
@@ -443,6 +470,8 @@ public class Config extends EmptyExtension {
         if (jsonProperty.encoder() != Encoder.class) {
             try {
                 binding.encoder = jsonProperty.encoder().newInstance();
+            } catch (JsonException e) {
+                throw e;
             } catch (Exception e) {
                 throw new JsonException(e);
             }

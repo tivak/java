@@ -95,6 +95,26 @@ public class TestString extends TestCase {
         }
     }
 
+    public void test_invalid_string() throws IOException {
+        for (String str : new String[]{
+                "\"\\x0008\"",
+                "\"\\u000Z\"",
+                "\"\\u000\"",
+                "\"\\u00\"",
+                "\"\\u0\"",
+                "\"\\\"",
+                "\"\\udd1e\"",
+                "\"\\ud834\"",
+                "\"\\ud834\\x\"",
+                "\"\\ud834\\ud834\"",
+        }) {
+            try {JsonIterator.deserialize(str, String.class);
+            } catch (JsonException e) {
+            } catch (IndexOutOfBoundsException e) {
+            }
+        }
+    }
+
     public void test_long_string() throws IOException {
         JsonIterator iter = JsonIterator.parse("\"[\\\"LL\\\",\\\"MM\\\\\\/LW\\\",\\\"JY\\\",\\\"S\\\",\\\"C\\\",\\\"IN\\\",\\\"ME \\\\\\/ LE\\\"]\"");
         assertEquals("[\"LL\",\"MM\\/LW\",\"JY\",\"S\",\"C\",\"IN\",\"ME \\/ LE\"]", iter.readString());

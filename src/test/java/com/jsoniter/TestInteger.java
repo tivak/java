@@ -6,6 +6,8 @@ import org.junit.experimental.categories.Category;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+//import java.math.BigDecimal;
+//import java.math.BigInteger;
 
 public class TestInteger extends TestCase {
 
@@ -21,25 +23,29 @@ public class TestInteger extends TestCase {
     }
 
     public void test_positive_negative_int() throws IOException {
+        assertEquals(0, parseInt("0"));
         assertEquals(4321, parseInt("4321"));
         assertEquals(54321, parseInt("54321"));
         assertEquals(654321, parseInt("654321"));
         assertEquals(7654321, parseInt("7654321"));
         assertEquals(87654321, parseInt("87654321"));
         assertEquals(987654321, parseInt("987654321"));
+        assertEquals(2147483647, parseInt("2147483647"));
         assertEquals(-4321, parseInt("-4321"));
+        assertEquals(-2147483648, parseInt("-2147483648"));
     }
 
     public void test_positive_negative_long() throws IOException {
         assertEquals(0L, parseLong("0"));
-        assertEquals(1L, parseLong("01"));
         assertEquals(4321L, parseLong("4321"));
         assertEquals(54321L, parseLong("54321"));
         assertEquals(654321L, parseLong("654321"));
         assertEquals(7654321L, parseLong("7654321"));
         assertEquals(87654321L, parseLong("87654321"));
         assertEquals(987654321L, parseLong("987654321"));
+        assertEquals(9223372036854775807L, parseLong("9223372036854775807"));
         assertEquals(-4321L, parseLong("-4321"));
+        assertEquals(-9223372036854775808L, parseLong("-9223372036854775808"));
     }
 
     public void test_max_min_int() throws IOException {
@@ -58,14 +64,38 @@ public class TestInteger extends TestCase {
 
     public void test_large_number() throws IOException {
         try {
-            JsonIterator.deserialize(Integer.toString(Integer.MIN_VALUE) + "1", Integer.class);
+            JsonIterator.deserialize("2147483648", Integer.class);
             fail();
         } catch (JsonException e) {
         }
+        for (int i = 300000000; i < 2000000000; i += 10000000) {
+            try {
+                JsonIterator.deserialize(i + "0", Integer.class);
+                fail();
+            } catch (JsonException e) {
+            }
+            try {
+                JsonIterator.deserialize(-i + "0", Integer.class);
+                fail();
+            } catch (JsonException e) {
+            }
+        }
         try {
-            JsonIterator.deserialize(Long.toString(Long.MAX_VALUE) + "1", Long.class);
+            JsonIterator.deserialize("9223372036854775808", Long.class);
             fail();
         } catch (JsonException e) {
+        }
+        for (long i = 1000000000000000000L; i < 9000000000000000000L; i += 100000000000000000L) {
+            try {
+                JsonIterator.deserialize(i + "0", Long.class);
+                fail();
+            } catch (JsonException e) {
+            }
+            try {
+                JsonIterator.deserialize(-i + "0", Long.class);
+                fail();
+            } catch (JsonException e) {
+            }
         }
     }
 
@@ -86,13 +116,68 @@ public class TestInteger extends TestCase {
         test_large_number();
     }
 
+    public void test_leading_zero() throws IOException {
+        assertEquals(Integer.valueOf(0), JsonIterator.deserialize("0", int.class));
+        assertEquals(Long.valueOf(0), JsonIterator.deserialize("0", long.class));
+        try {
+            JsonIterator.deserialize("01", int.class);
+            fail();
+        } catch (JsonException e) {
+        }
+        try {
+            JsonIterator.deserialize("02147483647", int.class);
+            fail();
+        } catch (JsonException e) {
+        }
+        try {
+            JsonIterator.deserialize("01", long.class);
+            fail();
+        } catch (JsonException e) {
+        }
+        try {
+            JsonIterator.deserialize("09223372036854775807", long.class);
+            fail();
+        } catch (JsonException e) {
+        }
+/* FIXME if we should fail on parsing of leading zeroes for other numbers
+        try {
+            JsonIterator.deserialize("01", double.class);
+            fail();
+        } catch (JsonException e) {
+        }
+        try {
+            JsonIterator.deserialize("01", float.class);
+            fail();
+        } catch (JsonException e) {
+        }
+        try {
+            JsonIterator.deserialize("01", BigInteger.class);
+            fail();
+        } catch (JsonException e) {
+        }
+        try {
+            JsonIterator.deserialize("01", BigDecimal.class);
+            fail();
+        } catch (JsonException e) {
+        }
+*/
+    }
+
+    public void test_max_int() throws IOException {
+        int[] ints = JsonIterator.deserialize("[2147483647,-2147483648]", int[].class);
+        assertEquals(Integer.MAX_VALUE, ints[0]);
+        assertEquals(Integer.MIN_VALUE, ints[1]);
+    }
+
     private int parseInt(String input) throws IOException {
         if (isStreaming) {
             JsonIterator iter = JsonIterator.parse(new ByteArrayInputStream(input.getBytes()), 2);
             return iter.readInt();
         } else {
             JsonIterator iter = JsonIterator.parse(input);
-            return iter.readInt();
+            int v = iter.readInt();
+            assertEquals(input.length(), iter.head); // iterator head should point on next non-parsed byte
+            return v;
         }
     }
 
@@ -102,7 +187,9 @@ public class TestInteger extends TestCase {
             return iter.readLong();
         } else {
             JsonIterator iter = JsonIterator.parse(input);
-            return iter.readLong();
+            long v = iter.readLong();
+            assertEquals(input.length(), iter.head); // iterator head should point on next non-parsed byte
+            return v;
         }
     }
 }

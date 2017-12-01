@@ -1,8 +1,12 @@
 package com.jsoniter;
 
+import com.jsoniter.annotation.JsonCreator;
 import com.jsoniter.annotation.JsonMissingProperties;
 import com.jsoniter.annotation.JsonProperty;
 import com.jsoniter.fuzzy.StringIntDecoder;
+import com.jsoniter.output.JsonStream;
+import com.jsoniter.spi.DecodingMode;
+import com.jsoniter.spi.JsonException;
 import junit.framework.TestCase;
 
 import java.io.IOException;
@@ -121,4 +125,63 @@ public class TestAnnotationJsonProperty extends TestCase {
         TestObject8 entity = JsonIterator.deserialize(test, TestObject8.class);
         assertEquals(200, entity.code2);
     }
+
+    public static class TestObject9 {
+        private String field1 = "hello";
+
+        public String getField1() {
+            return field1;
+        }
+
+        @JsonProperty("field-1")
+        public void setField1(String field1) {
+            this.field1 = field1;
+        }
+    }
+
+    public void test_getter_and_setter() throws IOException {
+        String test ="{\"field-1\":\"hi\"}";
+        TestObject9 entity = JsonIterator.deserialize(test, TestObject9.class);
+        assertEquals("hi", entity.getField1());
+    }
+
+    public static class TestObject10 {
+        private int field;
+
+        @JsonCreator
+        public TestObject10(@JsonProperty("hello") int field) {
+            this.field = field;
+        }
+
+        public int getField() {
+            return field;
+        }
+    }
+
+    public void test_creator_with_json_property() {
+        String input = "{\"hello\":100}";
+        TestObject10 obj = JsonIterator.deserialize(input, TestObject10.class);
+        assertEquals(100, obj.field);
+        assertEquals("{\"field\":100}", JsonStream.serialize(obj));
+    }
+
+    public static class TestObject11 {
+        @JsonProperty("hello")
+        public int field;
+
+        public int getField() {
+            return field;
+        }
+
+        public void setField(int field) {
+            this.field = field;
+        }
+    }
+
+    public void test_field_and_getter_setter() {
+        String input = "{\"hello\":100}";
+        TestObject11 obj = JsonIterator.deserialize(input, TestObject11.class);
+        assertEquals(100, obj.field);
+    }
+
 }

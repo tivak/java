@@ -5,6 +5,7 @@ import com.jsoniter.any.Any;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.lang.reflect.WildcardType;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.HashMap;
@@ -110,6 +111,8 @@ public class TypeLiteral<T> {
                     decoderClassName.append('_');
                     decoderClassName.append(typeName);
                 }
+            } catch (JsonException e) {
+                throw e;
             } catch (Exception e) {
                 throw new JsonException("failed to generate cache key for: " + type, e);
             }
@@ -118,6 +121,8 @@ public class TypeLiteral<T> {
             Type compType = gaType.getGenericComponentType();
             decoderClassName.append(formatTypeWithoutSpecialCharacter(compType));
             decoderClassName.append("_array");
+        } else if (type instanceof WildcardType) {
+            decoderClassName.append(Object.class.getName());
         } else {
             throw new UnsupportedOperationException("do not know how to handle: " + type);
         }
@@ -141,6 +146,9 @@ public class TypeLiteral<T> {
         if (type instanceof GenericArrayType) {
             GenericArrayType gaType = (GenericArrayType) type;
             return formatTypeWithoutSpecialCharacter(gaType.getGenericComponentType()) + "_array";
+        }
+        if (type instanceof WildcardType) {
+            return Object.class.getCanonicalName();
         }
         throw new JsonException("unsupported type: " + type + ", of class " + type.getClass());
     }
